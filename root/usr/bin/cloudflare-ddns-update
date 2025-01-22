@@ -73,15 +73,15 @@ fi
 # 获取当前IP
 if [ "$ip_source" = "interface" ]; then
     if [ "$record_type" = "A" ]; then
-        current_ip=$(ip -4 addr show dev "$interface" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
+        current_ip=$(ip -4 addr show dev "$interface" 2>/dev/null | awk '/inet/ {split($2,a,"/"); print a[1]}' | head -n1)
     else
-        current_ip=$(ip -6 addr show dev "$interface" 2>/dev/null | grep -oP '(?<=inet6\s)[0-9a-fA-F:]+' | head -n1 | grep -v '^fe80')
+        current_ip=$(ip -6 addr show dev "$interface" 2>/dev/null | awk '/inet6/ && !/fe80/ {split($2,a,"/"); print a[1]}' | head -n1)
     fi
 else
     if [ "$record_type" = "A" ]; then
-        current_ip=$(curl -s http://ip.3322.net)
+        current_ip=$(curl -s http://4.ipw.cn)
     else
-        current_ip=$(curl -s https://api6.ipify.org)
+        current_ip=$(curl -s http://6.ipw.cn)
     fi
 fi
 
