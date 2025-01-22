@@ -1,33 +1,18 @@
 name: Build OpenWrt Package
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:
-        description: 'ImmortalWrt Version'
+        description: '版本号 (例如: 1.0.0)'
         required: true
-        default: '23.05.4'
-        type: choice
-        options:
-          - '23.05.4'
-          - '23.05.3'
-          - '21.02.7'
-          - 'snapshot'
-      arch:
-        description: 'Target Architecture'
-        required: true
-        default: 'x86/64'
-        type: choice
-        options:
-          - 'x86/64'
-          - 'ramips/mt7621'
-          - 'rockchip/armv8'
-          - 'bcm27xx/bcm2711'
-
-# 添加权限配置
-permissions:
-  contents: write
-  packages: write
+        default: '1.0.0'
+      description:
+        description: '更新说明'
+        required: false
+        default: '常规更新'
 
 jobs:
   build:
@@ -38,65 +23,28 @@ jobs:
     
     - name: Setup OpenWrt SDK
       run: |
-        # 构建SDK URL
-        if [ "${{ github.event.inputs.version }}" = "snapshot" ]; then
-          SDK_BASE_URL="https://downloads.immortalwrt.org/snapshots/targets/${{ github.event.inputs.arch }}"
-        else
-          SDK_BASE_URL="https://downloads.immortalwrt.org/releases/${{ github.event.inputs.version }}/targets/${{ github.event.inputs.arch }}"
-        fi
+        SDK_URL="https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz"
+        SDK_FILE="openwrt-sdk.tar.xz"
+        SDK_FOLDER="openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64"
         
-        echo "Checking SDK base URL: ${SDK_BASE_URL}"
-        if ! curl --output /dev/null --silent --head --fail "${SDK_BASE_URL}"; then
-          echo "Error: SDK base URL not accessible"
-          exit 1
-        fi
-        
-        # 获取SDK文件名
-        echo "Fetching profiles.json..."
-        SDK_INFO=$(curl -s "${SDK_BASE_URL}/profiles.json")
-        if [ -z "$SDK_INFO" ]; then
-          echo "Error: Could not fetch profiles.json"
-          exit 1
-        fi
-        
-        SDK_FILENAME=$(echo "$SDK_INFO" | grep -o "immortalwrt-sdk-.*linux-x86_64.tar.xz" | head -n1)
-        if [ -z "$SDK_FILENAME" ]; then
-          echo "Error: Could not find SDK filename in profiles.json"
-          echo "profiles.json content:"
-          echo "$SDK_INFO"
-          exit 1
-        fi
-        
-        echo "Downloading SDK from: ${SDK_BASE_URL}/${SDK_FILENAME}"
-        if ! wget -O sdk.tar.xz "${SDK_BASE_URL}/${SDK_FILENAME}"; then
-          echo "Error: Failed to download SDK"
-          exit 1
-        fi
-        
-        echo "Verifying downloaded file..."
-        file sdk.tar.xz
-        ls -lh sdk.tar.xz
+        echo "Downloading SDK..."
+        wget -O "$SDK_FILE" "$SDK_URL"
         
         echo "Extracting SDK..."
-        if ! tar xf sdk.tar.xz; then
-          echo "Error: Failed to extract SDK"
-          exit 1
-        fi
+        tar xf "$SDK_FILE"
         
         echo "Checking extracted contents..."
         ls -la
         
-        # 移动SDK目录
-        SDK_FOLDER=$(ls -d immortalwrt-sdk-* 2>/dev/null || true)
-        if [ -z "$SDK_FOLDER" ]; then
-          echo "Error: Could not find SDK folder"
+        if [ -d "$SDK_FOLDER" ]; then
+          echo "Moving SDK folder..."
+          mv "$SDK_FOLDER" sdk
+        else
+          echo "Error: SDK folder not found!"
           echo "Contents of current directory:"
           ls -la
           exit 1
         fi
-        
-        echo "Moving SDK folder: $SDK_FOLDER"
-        mv "$SDK_FOLDER" sdk
         
     - name: Install Dependencies
       run: |
@@ -136,7 +84,7 @@ jobs:
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
-        name: luci-app-cloudflare-ddns-${{ github.event.inputs.arch }}-${{ github.event.inputs.version }}
+        name: luci-app-cloudflare-ddns
         path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
         
     - name: Create Release
@@ -144,8 +92,10 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
-        tag_name: v${{ github.event.inputs.version }}-${{ github.event.inputs.arch }}-${{ github.run_number }}
-        name: Release ${{ github.event.inputs.version }} for ${{ github.event.inputs.arch }}
+        tag_name: v${{ github.event.inputs.version }}
+        body: |
+          版本: v${{ github.event.inputs.version }}
+          ${{ github.event.inputs.description }}
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
