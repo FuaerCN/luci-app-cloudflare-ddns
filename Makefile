@@ -11,6 +11,6 @@ LUCI_TITLE:=LuCI support for Cloudflare DDNS
 LUCI_DEPENDS:=+curl
 LUCI_PKGARCH:=all
 
-include $(TOPDIR)/feeds/luci/luci.mk
+include ../../luci.mk
 
 # call BuildPackage - OpenWrt buildroot signature 
