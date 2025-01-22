@@ -18,9 +18,9 @@ o = s:option(Value, "domain", translate("域名"))
 o.description = translate("完整域名，例如: test.example.com")
 o.rmempty = false
 
-o = s:option(Value, "record_type", translate("记录类型"))
-o:value("A", "A")
-o:value("AAAA", "AAAA")
+o = s:option(ListValue, "record_type", translate("记录类型"))
+o:value("A", translate("A - IPv4地址"))
+o:value("AAAA", translate("AAAA - IPv6地址"))
 o.default = "A"
 o.rmempty = false
 
