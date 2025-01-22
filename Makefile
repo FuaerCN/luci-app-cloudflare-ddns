@@ -8,9 +8,9 @@ PKG_LICENSE:=MIT
 PKG_MAINTAINER:=Your Name <your@email.com>
 
 LUCI_TITLE:=LuCI support for Cloudflare DDNS
-LUCI_DEPENDS:=+curl
+LUCI_DEPENDS:=+curl +luci-base
 LUCI_PKGARCH:=all
 
-include ../../luci.mk
+include $(TOPDIR)/feeds/luci/luci.mk
 
 # call BuildPackage - OpenWrt buildroot signature 
