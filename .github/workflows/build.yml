@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'OpenWrt Version'
+        description: 'ImmortalWrt Version'
         required: true
-        default: '22.03.5'
+        default: '23.05.4'
         type: choice
         options:
-          - '22.03.5'
+          - '23.05.4'
+          - '23.05.3'
           - '21.02.7'
           - 'snapshot'
       arch:
@@ -39,14 +40,14 @@ jobs:
       run: |
         # 构建SDK URL
         if [ "${{ github.event.inputs.version }}" = "snapshot" ]; then
-          SDK_BASE_URL="https://downloads.openwrt.org/snapshots/targets/${{ github.event.inputs.arch }}"
+          SDK_BASE_URL="https://downloads.immortalwrt.org/snapshots/targets/${{ github.event.inputs.arch }}"
         else
-          SDK_BASE_URL="https://downloads.openwrt.org/releases/${{ github.event.inputs.version }}/targets/${{ github.event.inputs.arch }}"
+          SDK_BASE_URL="https://downloads.immortalwrt.org/releases/${{ github.event.inputs.version }}/targets/${{ github.event.inputs.arch }}"
         fi
         
         # 获取SDK文件名
         SDK_INFO=$(curl -s "${SDK_BASE_URL}/profiles.json")
-        SDK_FILENAME=$(echo "$SDK_INFO" | grep -o "openwrt-sdk-.*linux-x86_64.tar.xz" | head -n1)
+        SDK_FILENAME=$(echo "$SDK_INFO" | grep -o "immortalwrt-sdk-.*linux-x86_64.tar.xz" | head -n1)
         
         echo "Downloading SDK from: ${SDK_BASE_URL}/${SDK_FILENAME}"
         wget "${SDK_BASE_URL}/${SDK_FILENAME}" -O sdk.tar.xz
@@ -58,7 +59,7 @@ jobs:
         ls -la
         
         # 移动SDK目录
-        SDK_FOLDER=$(ls -d openwrt-sdk-*)
+        SDK_FOLDER=$(ls -d immortalwrt-sdk-*)
         if [ -d "$SDK_FOLDER" ]; then
           echo "Moving SDK folder: $SDK_FOLDER"
           mv "$SDK_FOLDER" sdk
