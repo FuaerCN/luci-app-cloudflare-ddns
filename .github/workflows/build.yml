@@ -14,6 +14,10 @@ on:
         required: false
         default: '常规更新'
 
+# 添加权限配置
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -67,6 +71,10 @@ jobs:
         
         echo "Copying files..."
         cp -rv Makefile luasrc root sdk/package/luci-app-cloudflare-ddns/
+        
+        echo "Setting file permissions..."
+        chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/init.d/cloudflare-ddns
+        chmod 755 sdk/package/luci-app-cloudflare-ddns/root/usr/bin/cloudflare-ddns-update
         
         echo "Package directory contents:"
         ls -la sdk/package/luci-app-cloudflare-ddns/
