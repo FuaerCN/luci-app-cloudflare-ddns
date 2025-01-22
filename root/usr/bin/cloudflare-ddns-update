@@ -14,7 +14,6 @@ proxied=$(uci -q get cloudflare-ddns.config.proxied)
 # 获取根域名
 get_root_domain() {
     local domain=$1
-    local longest_match=""
     
     while [ -n "$domain" ]; do
         zone_check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$domain" \
@@ -109,4 +108,4 @@ main() {
     fi
 }
 
-main 
+main
