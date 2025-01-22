@@ -9,130 +9,49 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v3
     
     - name: Setup OpenWrt SDK
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
-        gettext git java-propose-classpath libelf-dev libncurses5-dev \
-        libncursesw5-dev libssl-dev python3 python3-dev unzip wget \
-        python3-pip python3-setuptools rsync subversion \
-        swig time xsltproc zlib1g-dev
-        
+        # 下载并解压 OpenWrt SDK
         wget https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
         tar xf openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
-        mv openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64 sdk
+        mv openwrt-sdk-* sdk
         
-        cd sdk
-        
-        mkdir -p logs
-        
-        # 配置feeds
-        echo "src-git-full luci https://github.com/openwrt/luci.git^98abb58" > feeds.conf
-        echo "src-git-full packages https://git.openwrt.org/feed/packages.git^57a680b" >> feeds.conf
-        
-        # 更新并安装feeds
-        ./scripts/feeds update -a 2>&1 | tee logs/feeds-update.log
-        ./scripts/feeds install -a 2>&1 | tee logs/feeds-install.log
-        
-        make tools/install -j$(nproc) 2>&1 | tee logs/tools-install.log
-        make toolchain/install -j$(nproc) 2>&1 | tee logs/toolchain-install.log
-        
-        cat >> .config <<EOF
-        CONFIG_PACKAGE_luci-app-cloudflare-ddns=y
-        CONFIG_PACKAGE_curl=y
-        CONFIG_PACKAGE_lua=y
-        CONFIG_PACKAGE_luci-base=y
-        CONFIG_PACKAGE_luci=y
-        CONFIG_PACKAGE_luci-mod-admin-full=y
-        CONFIG_PACKAGE_luci-lib-base=y
-        CONFIG_PACKAGE_luci-lib-ip=y
-        CONFIG_PACKAGE_luci-lib-jsonc=y
-        CONFIG_PACKAGE_luci-lib-nixio=y
-        CONFIG_ALL_NONSHARED=y
-        CONFIG_ALL=y
-        EOF
-        
-        make defconfig 2>&1 | tee logs/defconfig.log
-    
-    - name: Copy Package Files
+    - name: Prepare Package
       run: |
+        # 创建包目录
         mkdir -p sdk/package/luci-app-cloudflare-ddns
-        cp -r luasrc root Makefile sdk/package/luci-app-cloudflare-ddns/
+        # 复制文件到SDK
+        cp -r * sdk/package/luci-app-cloudflare-ddns/
         
-        # 显示复制的文件
-        echo "=== Copied files ==="
-        ls -R sdk/package/luci-app-cloudflare-ddns/
-        echo "=================="
-    
+    - name: Install Dependencies
+      run: |
+        cd sdk
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        
     - name: Build Package
       run: |
         cd sdk
+        make defconfig
+        make package/luci-app-cloudflare-ddns/compile V=s
         
-        # 显示编译环境
-        echo "=== Build environment ==="
-        pwd
-        ls -la
-        echo "=================="
-        
-        # 编译包
-        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc) 2>&1 | tee logs/compile.log
-        
-        # 检查编译结果
-        if [ $? -ne 0 ]; then
-          echo "Build failed. Check the logs for details."
-          cat logs/compile.log
-          exit 1
-        fi
-        
-        # 显示编译后的文件结构
-        echo "=== Directory structure after build ==="
-        ls -R bin/ || echo "bin/ not found"
-        ls -R staging_dir/ || echo "staging_dir/ not found"
-        ls -R build_dir/ || echo "build_dir/ not found"
-        echo "=================="
-        
-        # 查找所有IPK文件
-        echo "=== Looking for IPK files ==="
-        find . -type f -name "*.ipk" -ls
-        echo "=================="
-    
-    - name: Find and Upload IPK
-      run: |
-        cd sdk
-        
-        # 创建临时目录
-        mkdir -p ipk-files
-        
-        # 查找并复制IPK文件
-        echo "=== Finding IPK files ==="
-        find . -type f -name "luci-app-cloudflare-ddns*.ipk" -exec cp -v {} ipk-files/ \;
-        
-        # 检查是否找到并复制了文件
-        if [ ! "$(ls -A ipk-files)" ]; then
-          echo "No IPK files found or copied!"
-          echo "Current directory structure:"
-          pwd
-          ls -R
-          exit 1
-        else
-          echo "Found and copied these files to ipk-files/:"
-          ls -l ipk-files/
-        fi
-    
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
         name: luci-app-cloudflare-ddns
-        path: sdk/ipk-files/*.ipk
-    
-    - name: Upload Build Logs
-      if: always()
-      uses: actions/upload-artifact@v3
+        path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
+        
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
       with:
-        name: build-logs
-        path: sdk/logs/ 
+        files: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
+        tag_name: v${{ github.run_number }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
