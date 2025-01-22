@@ -8,7 +8,7 @@ PKG_LICENSE:=MIT
 PKG_MAINTAINER:=Your Name <your@email.com>
 
 LUCI_TITLE:=LuCI support for Cloudflare DDNS
-LUCI_DEPENDS:=+curl +luci-base
+LUCI_DEPENDS:=+curl +luci-base +luci-compat
 LUCI_PKGARCH:=all
 
 include $(TOPDIR)/feeds/luci/luci.mk
