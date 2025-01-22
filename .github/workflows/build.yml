@@ -18,15 +18,23 @@ jobs:
       run: |
         # 下载并解压 OpenWrt SDK
         wget https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
+        ls -la
         tar xf openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
-        mv openwrt-sdk-* sdk
+        ls -la
+        SDK_DIR=$(ls -d openwrt-sdk-*)
+        echo "Found SDK directory: $SDK_DIR"
+        mv "$SDK_DIR" sdk
+        ls -la
         
     - name: Prepare Package
       run: |
-        # 创建包目录
+        ls -la
+        echo "Creating package directory..."
         mkdir -p sdk/package/luci-app-cloudflare-ddns
-        # 复制文件到SDK，排除.git和sdk目录
-        cp -r Makefile luasrc root sdk/package/luci-app-cloudflare-ddns/
+        echo "Copying files..."
+        cp -rv Makefile luasrc root sdk/package/luci-app-cloudflare-ddns/
+        echo "Listing package directory..."
+        ls -la sdk/package/luci-app-cloudflare-ddns/
         
     - name: Install Dependencies
       run: |
