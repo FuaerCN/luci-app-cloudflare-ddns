@@ -31,6 +31,11 @@ jobs:
         
         mkdir -p logs
         
+        # 配置feeds
+        echo "src-git-full luci https://github.com/openwrt/luci.git^98abb58" > feeds.conf
+        echo "src-git-full packages https://git.openwrt.org/feed/packages.git^57a680b" >> feeds.conf
+        
+        # 更新并安装feeds
         ./scripts/feeds update -a 2>&1 | tee logs/feeds-update.log
         ./scripts/feeds install -a 2>&1 | tee logs/feeds-install.log
         
