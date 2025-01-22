@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     
     steps:
     - uses: actions/checkout@v3
@@ -23,21 +23,34 @@ jobs:
         python3-pip python3-setuptools rsync subversion \
         swig time xsltproc zlib1g-dev
         
-        git clone https://github.com/openwrt/openwrt.git sdk
+        wget https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
+        tar xf openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz
+        mv openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64 sdk
+        
         cd sdk
         
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        mkdir -p logs
         
-        make tools/install -j$(nproc)
-        make toolchain/install -j$(nproc)
+        ./scripts/feeds update -a 2>&1 | tee logs/feeds-update.log
+        ./scripts/feeds install -a 2>&1 | tee logs/feeds-install.log
         
-        echo 'CONFIG_PACKAGE_luci-app-cloudflare-ddns=y' >> .config
-        echo 'CONFIG_PACKAGE_curl=y' >> .config
-        echo 'CONFIG_PACKAGE_lua=y' >> .config
-        echo 'CONFIG_PACKAGE_luci-base=y' >> .config
+        make tools/install -j$(nproc) 2>&1 | tee logs/tools-install.log
+        make toolchain/install -j$(nproc) 2>&1 | tee logs/toolchain-install.log
         
-        make defconfig
+        cat >> .config <<EOF
+        CONFIG_PACKAGE_luci-app-cloudflare-ddns=y
+        CONFIG_PACKAGE_curl=y
+        CONFIG_PACKAGE_lua=y
+        CONFIG_PACKAGE_luci-base=y
+        CONFIG_PACKAGE_luci=y
+        CONFIG_PACKAGE_luci-mod-admin-full=y
+        CONFIG_PACKAGE_luci-lib-base=y
+        CONFIG_PACKAGE_luci-lib-ip=y
+        CONFIG_PACKAGE_luci-lib-jsonc=y
+        CONFIG_PACKAGE_luci-lib-nixio=y
+        EOF
+        
+        make defconfig 2>&1 | tee logs/defconfig.log
     
     - name: Copy Package Files
       run: |
@@ -47,14 +60,19 @@ jobs:
     - name: Build Package
       run: |
         cd sdk
-        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc)
+        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc) 2>&1 | tee logs/compile.log || {
+          echo "Build failed. Check the logs for details."
+          exit 1
+        }
     
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
         name: luci-app-cloudflare-ddns
-        path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
-
+        path: |
+          sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
+          sdk/bin/packages/*/luci/luci-app-cloudflare-ddns_*.ipk
+    
     - name: Upload Build Logs
       if: always()
       uses: actions/upload-artifact@v3
