@@ -1,11 +1,32 @@
 name: Build OpenWrt Package
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenWrt Version'
+        required: true
+        default: '22.03.5'
+        type: choice
+        options:
+          - '22.03.5'
+          - '21.02.7'
+          - 'snapshot'
+      arch:
+        description: 'Target Architecture'
+        required: true
+        default: 'x86/64'
+        type: choice
+        options:
+          - 'x86/64'
+          - 'ramips/mt7621'
+          - 'rockchip/armv8'
+          - 'bcm27xx/bcm2711'
+
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   build:
@@ -16,21 +37,30 @@ jobs:
     
     - name: Setup OpenWrt SDK
       run: |
-        SDK_URL="https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz"
-        SDK_FILE="openwrt-sdk.tar.xz"
-        SDK_FOLDER="openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64"
+        # 构建SDK URL
+        if [ "${{ github.event.inputs.version }}" = "snapshot" ]; then
+          SDK_BASE_URL="https://downloads.openwrt.org/snapshots/targets/${{ github.event.inputs.arch }}"
+        else
+          SDK_BASE_URL="https://downloads.openwrt.org/releases/${{ github.event.inputs.version }}/targets/${{ github.event.inputs.arch }}"
+        fi
         
-        echo "Downloading SDK..."
-        wget -O "$SDK_FILE" "$SDK_URL"
+        # 获取SDK文件名
+        SDK_INFO=$(curl -s "${SDK_BASE_URL}/profiles.json")
+        SDK_FILENAME=$(echo "$SDK_INFO" | grep -o "openwrt-sdk-.*linux-x86_64.tar.xz" | head -n1)
+        
+        echo "Downloading SDK from: ${SDK_BASE_URL}/${SDK_FILENAME}"
+        wget "${SDK_BASE_URL}/${SDK_FILENAME}" -O sdk.tar.xz
         
         echo "Extracting SDK..."
-        tar xf "$SDK_FILE"
+        tar xf sdk.tar.xz
         
         echo "Checking extracted contents..."
         ls -la
         
+        # 移动SDK目录
+        SDK_FOLDER=$(ls -d openwrt-sdk-*)
         if [ -d "$SDK_FOLDER" ]; then
-          echo "Moving SDK folder..."
+          echo "Moving SDK folder: $SDK_FOLDER"
           mv "$SDK_FOLDER" sdk
         else
           echo "Error: SDK folder not found!"
@@ -77,15 +107,16 @@ jobs:
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
-        name: luci-app-cloudflare-ddns
+        name: luci-app-cloudflare-ddns-${{ github.event.inputs.arch }}-${{ github.event.inputs.version }}
         path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
         
     - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
         files: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
-        tag_name: v${{ github.run_number }}
+        tag_name: v${{ github.event.inputs.version }}-${{ github.event.inputs.arch }}-${{ github.run_number }}
+        name: Release ${{ github.event.inputs.version }} for ${{ github.event.inputs.arch }}
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
