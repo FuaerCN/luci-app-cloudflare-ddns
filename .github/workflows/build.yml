@@ -29,8 +29,13 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
         
+        make tools/install -j$(nproc)
+        make toolchain/install -j$(nproc)
+        
         echo 'CONFIG_PACKAGE_luci-app-cloudflare-ddns=y' >> .config
         echo 'CONFIG_PACKAGE_curl=y' >> .config
+        echo 'CONFIG_PACKAGE_lua=y' >> .config
+        echo 'CONFIG_PACKAGE_luci-base=y' >> .config
         
         make defconfig
     
@@ -42,10 +47,17 @@ jobs:
     - name: Build Package
       run: |
         cd sdk
-        make package/luci-app-cloudflare-ddns/compile V=s
+        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc)
     
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
         name: luci-app-cloudflare-ddns
-        path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk 
+        path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
+
+    - name: Upload Build Logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-logs
+        path: sdk/logs/ 
