@@ -64,8 +64,10 @@ jobs:
         > feeds.conf.default
         
         # 添加需要的feeds源
-        echo "src-git-full packages https://git.openwrt.org/feed/packages.git^0da9f81" >> feeds.conf.default
-        echo "src-git-full luci https://git.openwrt.org/project/luci.git^7e0a13a" >> feeds.conf.default
+        cat > feeds.conf.default << EOF
+        src-git packages https://git.openwrt.org/feed/packages.git;openwrt-22.03
+        src-git luci https://git.openwrt.org/project/luci.git;openwrt-22.03
+        EOF
         
         echo "New feeds configuration:"
         cat feeds.conf.default
@@ -74,7 +76,9 @@ jobs:
         ./scripts/feeds clean
         ./scripts/feeds update -a
         ./scripts/feeds install -a
-        ./scripts/feeds install curl
+        
+        echo "Installed packages:"
+        ./scripts/feeds list -i
         
     - name: Prepare Package
       run: |
@@ -98,12 +102,18 @@ jobs:
     - name: Build Package
       run: |
         cd sdk
+        echo "Making defconfig..."
         make defconfig
-        make package/luci-app-cloudflare-ddns/compile V=s || {
+        
+        echo "Building package..."
+        make package/luci-app-cloudflare-ddns/compile V=sc || {
           echo "Build failed. Checking logs..."
           find . -name "*.log" -exec cat {} \;
           exit 1
         }
+        
+        echo "Build output directory contents:"
+        ls -R bin/packages/
         
     - name: Upload IPK
       uses: actions/upload-artifact@v3
