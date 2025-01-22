@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# 添加到服务菜单
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@cloudflare-ddns[-1]
+	add ucitrack cloudflare-ddns
+	set ucitrack.@cloudflare-ddns[-1].init=cloudflare-ddns
+	commit ucitrack
+EOF
+
+# 重新加载uci配置
+rm -f /tmp/luci-indexcache
+exit 0 
