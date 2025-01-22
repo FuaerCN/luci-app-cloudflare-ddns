@@ -1,4 +1,4 @@
-*.o
-*.so
+sdk/
 *.ipk
-/sdk/ 
+*.tar.gz
+*.tar.xz 
