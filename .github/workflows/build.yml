@@ -45,30 +45,58 @@ jobs:
           SDK_BASE_URL="https://downloads.immortalwrt.org/releases/${{ github.event.inputs.version }}/targets/${{ github.event.inputs.arch }}"
         fi
         
+        echo "Checking SDK base URL: ${SDK_BASE_URL}"
+        if ! curl --output /dev/null --silent --head --fail "${SDK_BASE_URL}"; then
+          echo "Error: SDK base URL not accessible"
+          exit 1
+        fi
+        
         # 获取SDK文件名
+        echo "Fetching profiles.json..."
         SDK_INFO=$(curl -s "${SDK_BASE_URL}/profiles.json")
+        if [ -z "$SDK_INFO" ]; then
+          echo "Error: Could not fetch profiles.json"
+          exit 1
+        fi
+        
         SDK_FILENAME=$(echo "$SDK_INFO" | grep -o "immortalwrt-sdk-.*linux-x86_64.tar.xz" | head -n1)
+        if [ -z "$SDK_FILENAME" ]; then
+          echo "Error: Could not find SDK filename in profiles.json"
+          echo "profiles.json content:"
+          echo "$SDK_INFO"
+          exit 1
+        fi
         
         echo "Downloading SDK from: ${SDK_BASE_URL}/${SDK_FILENAME}"
-        wget "${SDK_BASE_URL}/${SDK_FILENAME}" -O sdk.tar.xz
+        if ! wget -O sdk.tar.xz "${SDK_BASE_URL}/${SDK_FILENAME}"; then
+          echo "Error: Failed to download SDK"
+          exit 1
+        fi
+        
+        echo "Verifying downloaded file..."
+        file sdk.tar.xz
+        ls -lh sdk.tar.xz
         
         echo "Extracting SDK..."
-        tar xf sdk.tar.xz
+        if ! tar xf sdk.tar.xz; then
+          echo "Error: Failed to extract SDK"
+          exit 1
+        fi
         
         echo "Checking extracted contents..."
         ls -la
         
         # 移动SDK目录
-        SDK_FOLDER=$(ls -d immortalwrt-sdk-*)
-        if [ -d "$SDK_FOLDER" ]; then
-          echo "Moving SDK folder: $SDK_FOLDER"
-          mv "$SDK_FOLDER" sdk
-        else
-          echo "Error: SDK folder not found!"
+        SDK_FOLDER=$(ls -d immortalwrt-sdk-* 2>/dev/null || true)
+        if [ -z "$SDK_FOLDER" ]; then
+          echo "Error: Could not find SDK folder"
           echo "Contents of current directory:"
           ls -la
           exit 1
         fi
+        
+        echo "Moving SDK folder: $SDK_FOLDER"
+        mv "$SDK_FOLDER" sdk
         
     - name: Install Dependencies
       run: |
