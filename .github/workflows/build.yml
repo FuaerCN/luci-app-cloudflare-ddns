@@ -39,6 +39,17 @@ jobs:
           exit 1
         fi
         
+    - name: Install Dependencies
+      run: |
+        cd sdk
+        echo "src-git-full luci https://github.com/openwrt/luci.git" >> feeds.conf.default
+        echo "src-git-full packages https://github.com/openwrt/packages.git" >> feeds.conf.default
+        cat feeds.conf.default
+        ./scripts/feeds clean
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        ./scripts/feeds install luci
+        
     - name: Prepare Package
       run: |
         echo "Current directory contents:"
@@ -53,17 +64,15 @@ jobs:
         echo "Package directory contents:"
         ls -la sdk/package/luci-app-cloudflare-ddns/
         
-    - name: Install Dependencies
-      run: |
-        cd sdk
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
-        
     - name: Build Package
       run: |
         cd sdk
         make defconfig
-        make package/luci-app-cloudflare-ddns/compile V=s
+        make package/luci-app-cloudflare-ddns/compile V=s || {
+          echo "Build failed. Checking logs..."
+          find . -name "*.log" -exec cat {} \;
+          exit 1
+        }
         
     - name: Upload IPK
       uses: actions/upload-artifact@v3
