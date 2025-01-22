@@ -53,6 +53,10 @@ jobs:
     - name: Install Dependencies
       run: |
         cd sdk
+        # 添加feeds源
+        echo "src-git-full packages https://git.openwrt.org/feed/packages.git^0da9f81" >> feeds.conf.default
+        echo "src-git-full luci https://git.openwrt.org/project/luci.git^7e0a13a" >> feeds.conf.default
+        
         echo "Current feeds configuration:"
         cat feeds.conf.default
         
@@ -60,6 +64,7 @@ jobs:
         ./scripts/feeds clean
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+        ./scripts/feeds install curl
         
     - name: Prepare Package
       run: |
