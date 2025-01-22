@@ -11,13 +11,11 @@ LUCI_TITLE:=LuCI support for Cloudflare DDNS
 LUCI_DEPENDS:=+curl +luci-base
 LUCI_PKGARCH:=all
 
-# 添加这一行来包含 uci-defaults 文件
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
-include $(TOPDIR)/feeds/luci/luci.mk
-
-# 修改安装规则以确保所有必要文件都被安装
+# 在包含 luci.mk 之前定义我们的安装规则
 define Package/$(PKG_NAME)/install
+	$(call Package/luci/install/common,$(1))
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/usr/bin
@@ -28,6 +26,8 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./root/usr/bin/cloudflare-ddns-update $(1)/usr/bin/
 	$(INSTALL_CONF) ./root/etc/config/cloudflare-ddns $(1)/etc/config/
 endef
+
+include $(TOPDIR)/feeds/luci/luci.mk
 
 # 添加安装前的准备工作
 define Package/$(PKG_NAME)/preinst
