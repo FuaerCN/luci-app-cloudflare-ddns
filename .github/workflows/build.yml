@@ -75,6 +75,7 @@ jobs:
         echo "Setting file permissions..."
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/init.d/cloudflare-ddns
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/usr/bin/cloudflare-ddns-update
+        chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/luci-cloudflare-ddns
         
         echo "Package directory contents:"
         ls -la sdk/package/luci-app-cloudflare-ddns/
