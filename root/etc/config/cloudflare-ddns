@@ -1,7 +1,6 @@
 config cloudflare 'config'
     option enabled '0'
     option api_token ''
-    option zone_id ''
     option domain ''
     option record_type 'A'
     option update_interval '300'
