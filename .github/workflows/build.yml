@@ -69,21 +69,26 @@ jobs:
         echo "Creating package directory..."
         mkdir -p sdk/package/luci-app-cloudflare-ddns
         
+        echo "Checking source directory structure..."
+        find . -type f -not -path "./sdk/*" -not -path "./.git/*"
+        
         echo "Copying files..."
         cp -rv Makefile luasrc root sdk/package/luci-app-cloudflare-ddns/
+        
+        echo "Checking destination directory structure..."
+        find sdk/package/luci-app-cloudflare-ddns -type f
         
         echo "Setting file permissions..."
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/init.d/cloudflare-ddns
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/usr/bin/cloudflare-ddns-update
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/luci-cloudflare-ddns
         
+        echo "Verifying uci-defaults script:"
+        ls -la sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/
+        cat sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/luci-cloudflare-ddns
+        
         echo "Package directory contents:"
         ls -la sdk/package/luci-app-cloudflare-ddns/
-        
-        echo "Checking specific files:"
-        ls -la sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/
-        ls -la sdk/package/luci-app-cloudflare-ddns/root/etc/init.d/
-        ls -la sdk/package/luci-app-cloudflare-ddns/root/usr/bin/
         
     - name: Build Package
       run: |
