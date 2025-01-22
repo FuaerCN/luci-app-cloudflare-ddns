@@ -48,6 +48,8 @@ jobs:
         CONFIG_PACKAGE_luci-lib-ip=y
         CONFIG_PACKAGE_luci-lib-jsonc=y
         CONFIG_PACKAGE_luci-lib-nixio=y
+        CONFIG_ALL_NONSHARED=y
+        CONFIG_ALL=y
         EOF
         
         make defconfig 2>&1 | tee logs/defconfig.log
@@ -64,14 +66,34 @@ jobs:
           echo "Build failed. Check the logs for details."
           exit 1
         }
+        
+        # 显示编译后的文件
+        echo "=== Built files ==="
+        find bin/packages -type f -name "*.ipk"
+        echo "=================="
+    
+    - name: Find and Upload IPK
+      run: |
+        cd sdk
+        IPK_FILES=$(find bin/packages -type f -name "luci-app-cloudflare-ddns*.ipk")
+        if [ -z "$IPK_FILES" ]; then
+          echo "No IPK files found!"
+          echo "Directory contents:"
+          ls -R bin/
+          exit 1
+        else
+          echo "Found IPK files:"
+          echo "$IPK_FILES"
+          # 创建临时目录存放IPK文件
+          mkdir -p ipk-files
+          cp $IPK_FILES ipk-files/
+        fi
     
     - name: Upload IPK
       uses: actions/upload-artifact@v3
       with:
         name: luci-app-cloudflare-ddns
-        path: |
-          sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk
-          sdk/bin/packages/*/luci/luci-app-cloudflare-ddns_*.ipk
+        path: sdk/ipk-files/*.ipk
     
     - name: Upload Build Logs
       if: always()
