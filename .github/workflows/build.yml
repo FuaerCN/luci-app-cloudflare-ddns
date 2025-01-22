@@ -74,8 +74,8 @@ jobs:
         
         # 添加需要的feeds源
         cat > feeds.conf.default << EOF
-        src-git-full packages https://git.openwrt.org/feed/packages.git;openwrt-22.03
-        src-git-full luci https://git.openwrt.org/project/luci.git;openwrt-22.03
+        src-git-full packages https://git.openwrt.org/feed/packages.git^0da9f81
+        src-git-full luci https://git.openwrt.org/project/luci.git^7e0a13a
         EOF
         
         echo "New feeds configuration:"
@@ -114,17 +114,12 @@ jobs:
         echo "Making defconfig..."
         make defconfig
         
-        echo "Building dependencies..."
+        echo "Building tools and toolchain..."
         make tools/install -j$(nproc)
         make toolchain/install -j$(nproc)
         
-        echo "Building required packages..."
-        make package/feeds/luci/luci-lib-ip/compile V=s
-        make package/feeds/luci/luci-base/compile V=s
-        make package/feeds/packages/curl/compile V=s
-        
         echo "Building package..."
-        make package/luci-app-cloudflare-ddns/compile V=sc || {
+        make package/luci-app-cloudflare-ddns/compile V=s || {
           echo "Build failed. Checking logs..."
           find . -name "*.log" -exec cat {} \;
           exit 1
