@@ -14,10 +14,8 @@ o = s:option(Value, "api_token", translate("API Token"))
 o.password = true
 o.rmempty = false
 
-o = s:option(Value, "zone_id", translate("Zone ID"))
-o.rmempty = false
-
 o = s:option(Value, "domain", translate("域名"))
+o.description = translate("完整域名，例如: test.example.com")
 o.rmempty = false
 
 o = s:option(Value, "record_type", translate("记录类型"))
