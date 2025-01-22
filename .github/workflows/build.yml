@@ -42,13 +42,13 @@ jobs:
     - name: Install Dependencies
       run: |
         cd sdk
-        echo "src-git-full luci https://github.com/openwrt/luci.git" >> feeds.conf.default
-        echo "src-git-full packages https://github.com/openwrt/packages.git" >> feeds.conf.default
+        echo "Current feeds configuration:"
         cat feeds.conf.default
+        
+        echo "Updating and installing feeds..."
         ./scripts/feeds clean
         ./scripts/feeds update -a
         ./scripts/feeds install -a
-        ./scripts/feeds install luci
         
     - name: Prepare Package
       run: |
