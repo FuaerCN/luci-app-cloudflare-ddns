@@ -25,14 +25,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
-        gettext git java-propose-classpath libelf-dev libncurses5-dev \
-        libncursesw5-dev libssl-dev python3 python3-dev python3-pip unzip wget \
-        python3-setuptools rsync subversion swig time xsltproc zlib1g-dev
-    
     - name: Setup OpenWrt SDK
       run: |
         SDK_URL="https://downloads.openwrt.org/releases/22.03.5/targets/x86/64/openwrt-sdk-22.03.5-x86-64_gcc-11.2.0_musl.Linux-x86_64.tar.xz"
@@ -61,32 +53,13 @@ jobs:
     - name: Install Dependencies
       run: |
         cd sdk
-        
-        echo "Original feeds configuration:"
-        cat feeds.conf.default
-        
-        # 备份原始配置
-        cp feeds.conf.default feeds.conf.default.bak
-        
-        # 清理现有配置
-        > feeds.conf.default
-        
-        # 添加需要的feeds源
-        cat > feeds.conf.default << EOF
-        src-git-full packages https://git.openwrt.org/feed/packages.git^0da9f81
-        src-git-full luci https://git.openwrt.org/project/luci.git^7e0a13a
-        EOF
-        
-        echo "New feeds configuration:"
+        echo "Current feeds configuration:"
         cat feeds.conf.default
         
         echo "Updating and installing feeds..."
         ./scripts/feeds clean
         ./scripts/feeds update -a
         ./scripts/feeds install -a
-        
-        echo "Installed packages:"
-        ./scripts/feeds list -i
         
     - name: Prepare Package
       run: |
@@ -102,7 +75,6 @@ jobs:
         echo "Setting file permissions..."
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/init.d/cloudflare-ddns
         chmod 755 sdk/package/luci-app-cloudflare-ddns/root/usr/bin/cloudflare-ddns-update
-        chmod 755 sdk/package/luci-app-cloudflare-ddns/root/etc/uci-defaults/luci-cloudflare-ddns
         
         echo "Package directory contents:"
         ls -la sdk/package/luci-app-cloudflare-ddns/
@@ -110,22 +82,12 @@ jobs:
     - name: Build Package
       run: |
         cd sdk
-        echo "Making defconfig..."
         make defconfig
-        
-        echo "Building tools and toolchain..."
-        make tools/install -j$(nproc)
-        make toolchain/install -j$(nproc)
-        
-        echo "Building package..."
         make package/luci-app-cloudflare-ddns/compile V=s || {
           echo "Build failed. Checking logs..."
           find . -name "*.log" -exec cat {} \;
           exit 1
         }
-        
-        echo "Build output directory contents:"
-        ls -R bin/packages/
         
     - name: Upload IPK
       uses: actions/upload-artifact@v3
