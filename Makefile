@@ -11,7 +11,9 @@ LUCI_TITLE:=LuCI support for Cloudflare DDNS
 LUCI_DEPENDS:=+curl +luci-base
 LUCI_PKGARCH:=all
 
-# 在 include luci.mk 之前定义安装规则
+include $(TOPDIR)/feeds/luci/luci.mk
+
+# 定义文件安装规则
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci
 	$(INSTALL_DIR) $(1)/etc/init.d
@@ -23,10 +25,9 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./root/etc/init.d/cloudflare-ddns $(1)/etc/init.d/
 	$(INSTALL_BIN) ./root/usr/bin/cloudflare-ddns-update $(1)/usr/bin/
 	$(INSTALL_CONF) ./root/etc/config/cloudflare-ddns $(1)/etc/config/
-	$(INSTALL_BIN) ./root/etc/uci-defaults/luci-cloudflare-ddns $(1)/etc/uci-defaults/
+	$(CP) ./root/etc/uci-defaults/luci-cloudflare-ddns $(1)/etc/uci-defaults/
+	chmod 755 $(1)/etc/uci-defaults/luci-cloudflare-ddns
 endef
-
-include $(TOPDIR)/feeds/luci/luci.mk
 
 define Package/$(PKG_NAME)/conffiles
 /etc/config/cloudflare-ddns
@@ -35,11 +36,13 @@ endef
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 [ -n "$${IPKG_INSTROOT}" ] && exit 0
-rm -rf /tmp/luci-*
+if [ -f /etc/uci-defaults/luci-cloudflare-ddns ]; then
+    ( . /etc/uci-defaults/luci-cloudflare-ddns ) && rm -f /etc/uci-defaults/luci-cloudflare-ddns
+fi
 chmod 755 /etc/init.d/cloudflare-ddns
 chmod 755 /usr/bin/cloudflare-ddns-update
-( . /etc/uci-defaults/luci-cloudflare-ddns ) && rm -f /etc/uci-defaults/luci-cloudflare-ddns
 /etc/init.d/cloudflare-ddns enable >/dev/null 2>&1
+rm -rf /tmp/luci-*
 exit 0
 endef
 
