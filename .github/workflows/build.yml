@@ -69,24 +69,30 @@ jobs:
         
         # 显示编译后的文件
         echo "=== Built files ==="
-        find bin/packages -type f -name "*.ipk"
+        find . -type f -name "*.ipk"
         echo "=================="
     
     - name: Find and Upload IPK
       run: |
         cd sdk
-        IPK_FILES=$(find bin/packages -type f -name "luci-app-cloudflare-ddns*.ipk")
+        # 搜索所有可能的目录
+        IPK_FILES=$(find . -type f -name "luci-app-cloudflare-ddns*.ipk")
         if [ -z "$IPK_FILES" ]; then
           echo "No IPK files found!"
           echo "Directory contents:"
-          ls -R bin/
+          ls -R bin/ || echo "bin/ directory not found"
+          ls -R staging_dir/ || echo "staging_dir/ directory not found"
+          ls -R build_dir/ || echo "build_dir/ directory not found"
           exit 1
         else
           echo "Found IPK files:"
           echo "$IPK_FILES"
           # 创建临时目录存放IPK文件
           mkdir -p ipk-files
-          cp $IPK_FILES ipk-files/
+          # 复制找到的所有IPK文件
+          for ipk in $IPK_FILES; do
+            cp "$ipk" ipk-files/
+          done
         fi
     
     - name: Upload IPK
