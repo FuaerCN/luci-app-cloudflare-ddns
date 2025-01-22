@@ -1,0 +1,51 @@
+name: Build OpenWrt Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup OpenWrt SDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
+        gettext git java-propose-classpath libelf-dev libncurses5-dev \
+        libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget \
+        python3-distutils python3-setuptools python3-dev rsync subversion \
+        swig time xsltproc zlib1g-dev
+        
+        git clone https://github.com/openwrt/openwrt.git sdk
+        cd sdk
+        
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        
+        echo 'CONFIG_PACKAGE_luci-app-cloudflare-ddns=y' >> .config
+        echo 'CONFIG_PACKAGE_curl=y' >> .config
+        
+        make defconfig
+    
+    - name: Copy Package Files
+      run: |
+        mkdir -p sdk/package/luci-app-cloudflare-ddns
+        cp -r luasrc root Makefile sdk/package/luci-app-cloudflare-ddns/
+    
+    - name: Build Package
+      run: |
+        cd sdk
+        make package/luci-app-cloudflare-ddns/compile V=s
+    
+    - name: Upload IPK
+      uses: actions/upload-artifact@v3
+      with:
+        name: luci-app-cloudflare-ddns
+        path: sdk/bin/packages/*/base/luci-app-cloudflare-ddns_*.ipk 
