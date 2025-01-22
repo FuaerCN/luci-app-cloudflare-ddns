@@ -11,9 +11,6 @@ LUCI_TITLE:=LuCI support for Cloudflare DDNS
 LUCI_DEPENDS:=+curl +luci-base
 LUCI_PKGARCH:=all
 
-PKG_CONFIG_DEPENDS:= \
-	CONFIG_PACKAGE_$(PKG_NAME)
-
 include $(TOPDIR)/feeds/luci/luci.mk
 
 # 添加安装前的准备工作
