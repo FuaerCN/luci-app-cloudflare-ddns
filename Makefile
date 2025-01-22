@@ -16,10 +16,17 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
-# 添加文件复制规则
+# 修改安装规则以确保所有必要文件都被安装
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/etc/config
+	
 	$(INSTALL_BIN) ./root/etc/uci-defaults/luci-cloudflare-ddns $(1)/etc/uci-defaults/
+	$(INSTALL_BIN) ./root/etc/init.d/cloudflare-ddns $(1)/etc/init.d/
+	$(INSTALL_BIN) ./root/usr/bin/cloudflare-ddns-update $(1)/usr/bin/
+	$(INSTALL_CONF) ./root/etc/config/cloudflare-ddns $(1)/etc/config/
 endef
 
 # 添加安装前的准备工作
