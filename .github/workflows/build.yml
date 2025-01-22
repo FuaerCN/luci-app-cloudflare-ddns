@@ -58,41 +58,65 @@ jobs:
       run: |
         mkdir -p sdk/package/luci-app-cloudflare-ddns
         cp -r luasrc root Makefile sdk/package/luci-app-cloudflare-ddns/
+        
+        # 显示复制的文件
+        echo "=== Copied files ==="
+        ls -R sdk/package/luci-app-cloudflare-ddns/
+        echo "=================="
     
     - name: Build Package
       run: |
         cd sdk
-        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc) 2>&1 | tee logs/compile.log || {
-          echo "Build failed. Check the logs for details."
-          exit 1
-        }
         
-        # 显示编译后的文件
-        echo "=== Built files ==="
-        find . -type f -name "*.ipk"
+        # 显示编译环境
+        echo "=== Build environment ==="
+        pwd
+        ls -la
+        echo "=================="
+        
+        # 编译包
+        make package/luci-app-cloudflare-ddns/compile V=s -j$(nproc) 2>&1 | tee logs/compile.log
+        
+        # 检查编译结果
+        if [ $? -ne 0 ]; then
+          echo "Build failed. Check the logs for details."
+          cat logs/compile.log
+          exit 1
+        fi
+        
+        # 显示编译后的文件结构
+        echo "=== Directory structure after build ==="
+        ls -R bin/ || echo "bin/ not found"
+        ls -R staging_dir/ || echo "staging_dir/ not found"
+        ls -R build_dir/ || echo "build_dir/ not found"
+        echo "=================="
+        
+        # 查找所有IPK文件
+        echo "=== Looking for IPK files ==="
+        find . -type f -name "*.ipk" -ls
         echo "=================="
     
     - name: Find and Upload IPK
       run: |
         cd sdk
-        # 搜索所有可能的目录
-        IPK_FILES=$(find . -type f -name "luci-app-cloudflare-ddns*.ipk")
-        if [ -z "$IPK_FILES" ]; then
-          echo "No IPK files found!"
-          echo "Directory contents:"
-          ls -R bin/ || echo "bin/ directory not found"
-          ls -R staging_dir/ || echo "staging_dir/ directory not found"
-          ls -R build_dir/ || echo "build_dir/ directory not found"
+        
+        # 创建临时目录
+        mkdir -p ipk-files
+        
+        # 查找并复制IPK文件
+        echo "=== Finding IPK files ==="
+        find . -type f -name "luci-app-cloudflare-ddns*.ipk" -exec cp -v {} ipk-files/ \;
+        
+        # 检查是否找到并复制了文件
+        if [ ! "$(ls -A ipk-files)" ]; then
+          echo "No IPK files found or copied!"
+          echo "Current directory structure:"
+          pwd
+          ls -R
           exit 1
         else
-          echo "Found IPK files:"
-          echo "$IPK_FILES"
-          # 创建临时目录存放IPK文件
-          mkdir -p ipk-files
-          # 复制找到的所有IPK文件
-          for ipk in $IPK_FILES; do
-            cp "$ipk" ipk-files/
-          done
+          echo "Found and copied these files to ipk-files/:"
+          ls -l ipk-files/
         fi
     
     - name: Upload IPK
