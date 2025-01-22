@@ -1,0 +1,51 @@
+#!/bin/sh
+
+# 获取配置
+enabled=$(uci -q get cloudflare-ddns.config.enabled)
+api_token=$(uci -q get cloudflare-ddns.config.api_token)
+zone_id=$(uci -q get cloudflare-ddns.config.zone_id)
+domain=$(uci -q get cloudflare-ddns.config.domain)
+record_type=$(uci -q get cloudflare-ddns.config.record_type)
+ip_source=$(uci -q get cloudflare-ddns.config.ip_source)
+interface=$(uci -q get cloudflare-ddns.config.interface)
+proxied=$(uci -q get cloudflare-ddns.config.proxied)
+
+[ "$enabled" = "0" ] && exit 0
+
+# 获取当前IP
+if [ "$ip_source" = "interface" ]; then
+    if [ "$record_type" = "A" ]; then
+        current_ip=$(ip -4 addr show dev "$interface" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
+    else
+        current_ip=$(ip -6 addr show dev "$interface" 2>/dev/null | grep -oP '(?<=inet6\s)[0-9a-fA-F:]+' | head -n1 | grep -v '^fe80')
+    fi
+else
+    if [ "$record_type" = "A" ]; then
+        current_ip=$(curl -s http://ip.3322.net)
+    else
+        current_ip=$(curl -s https://api6.ipify.org)
+    fi
+fi
+
+# 确保获取到IP
+[ -z "$current_ip" ] && exit 1
+
+# 获取DNS记录ID
+response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?type=$record_type&name=$domain" \
+     -H "Authorization: Bearer $api_token" \
+     -H "Content-Type: application/json")
+
+# 使用grep和sed提取DNS记录ID
+dns_record_id=$(echo "$response" | grep -o '"id":"[^"]*"' | head -n1 | sed 's/"id":"\([^"]*\)"/\1/')
+
+# 如果没有获取到DNS记录ID则退出
+[ -z "$dns_record_id" ] && exit 1
+
+# 根据proxied设置转换为JSON布尔值
+[ "$proxied" = "1" ] && proxied_json="true" || proxied_json="false"
+
+# 更新DNS记录
+curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$dns_record_id" \
+     -H "Authorization: Bearer $api_token" \
+     -H "Content-Type: application/json" \
+     --data "{\"type\":\"$record_type\",\"name\":\"$domain\",\"content\":\"$current_ip\",\"proxied\":$proxied_json}" 
