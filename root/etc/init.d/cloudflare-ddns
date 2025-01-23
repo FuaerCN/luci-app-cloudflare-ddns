@@ -3,9 +3,14 @@
 START=99
 USE_PROCD=1
 
+reload_service() {
+    stop
+    start
+}
+
 start_service() {
     procd_open_instance
-    procd_set_param command /bin/sh -c "while true; do /usr/bin/cloudflare-ddns-update; sleep \$(uci -q get cloudflare-ddns.config.update_interval); done"
+    procd_set_param command /bin/sh -c "while true; do /usr/bin/cloudflare-ddns-update; sleep \$(uci -q get cloudflare-ddns.config.update_interval || echo 300); done"
     procd_set_param respawn
     procd_close_instance
 }
