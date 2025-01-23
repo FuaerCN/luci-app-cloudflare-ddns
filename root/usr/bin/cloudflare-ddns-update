@@ -15,8 +15,8 @@ proxied=$(uci -q get cloudflare-ddns.config.proxied)
 get_root_domain() {
     local domain=$1
     
-    while [ -n "$domain" ]; do
-        zone_check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$domain" \
+    while [[ "$domain" == *.* ]]; do
+        zone_check=$(curl -s -m 10 -X GET "https://api.cloudflare.com/client/v4/zones?name=$domain" \
             -H "Authorization: Bearer $api_token" \
             -H "Content-Type: application/json")
         if echo "$zone_check" | grep -q '"total_count":1'; then
@@ -38,9 +38,9 @@ get_current_ip() {
         fi
     else
         if [ "$record_type" = "A" ]; then
-            curl -s http://4.ipw.cn
+            curl -s -m 5 http://4.ipw.cn
         else
-            curl -s http://6.ipw.cn
+            curl -s -m 5 http://6.ipw.cn
         fi
     fi
 }
@@ -54,14 +54,14 @@ get_or_create_record() {
     local proxied=$5
     
     # 获取现有记录
-    local response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?type=$record_type&name=$domain" \
+    local response=$(curl -s -m 10 -X GET "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records?type=$record_type&name=$domain" \
          -H "Authorization: Bearer $api_token" \
          -H "Content-Type: application/json")
     
     if echo "$response" | grep -q '"count":0'; then
         # 创建新记录
         logger -t cloudflare-ddns "Creating new DNS record for $domain"
-        response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" \
+        response=$(curl -s -m 10 -X POST "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records" \
              -H "Authorization: Bearer $api_token" \
              -H "Content-Type: application/json" \
              --data "{\"type\":\"$record_type\",\"name\":\"$domain\",\"content\":\"$current_ip\",\"proxied\":$proxied}")
@@ -77,7 +77,7 @@ main() {
     [ -z "$root_domain" ] && { logger -t cloudflare-ddns "Error: Could not determine root domain for $domain"; exit 1; }
     
     # 获取Zone ID
-    local zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$root_domain" \
+    local zone_response=$(curl -s -m 10 -X GET "https://api.cloudflare.com/client/v4/zones?name=$root_domain" \
          -H "Authorization: Bearer $api_token" \
          -H "Content-Type: application/json")
     local zone_id=$(echo "$zone_response" | grep -o '"id":"[^"]*"' | head -n1 | sed 's/"id":"\([^"]*\)"/\1/')
@@ -95,7 +95,7 @@ main() {
     [ -z "$dns_record_id" ] && { logger -t cloudflare-ddns "Error: Could not get or create DNS record"; exit 1; }
     
     # 更新DNS记录
-    local update_response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$dns_record_id" \
+    local update_response=$(curl -s -m 10 -X PUT "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records/$dns_record_id" \
          -H "Authorization: Bearer $api_token" \
          -H "Content-Type: application/json" \
          --data "{\"type\":\"$record_type\",\"name\":\"$domain\",\"content\":\"$current_ip\",\"proxied\":$proxied_json}")
@@ -108,4 +108,4 @@ main() {
     fi
 }
 
-main
+main 
