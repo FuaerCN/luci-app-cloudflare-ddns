@@ -37,7 +37,7 @@ for _, iface in ipairs(nixio.getifaddrs()) do
 end
 o:depends("ip_source", "interface")
 
-o = s:option(Flag, "proxied", translate("开启Cloudflare代理"))
+o = s:option(Flag, "proxied", translate("CDN代理"))
 o.default = false
 o.rmempty = false
 
